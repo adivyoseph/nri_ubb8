@@ -2,7 +2,7 @@
 GPU to llm engine cpuset mapping on AMD UBB-8 Host systems
 
 This NRI plugin is only intended for use on UBB-8 based AMD Instict GPU host servers.
-This a POC to allow testiong of performances differences between standard Kubernetes and topology aware bin packing (CCX's).
+This a POC to allow testing of performance differences between standard Kubernetes and topology aware bin packing (CCX's).
 
 Assumes a dual socket host (NUMA with NPS1) and 4 whole GPU instances per node. (tested on single socket two CCX system)
 
@@ -28,7 +28,17 @@ POD annotations required
 
 
 TODO
-add kubeletcohfig checks
-test with tensor parallel that all card instances get mapped to a single CCX (may be a problem if > than 4)
+add kubeletconfig checks
+test with tensor parallel that all card instances get mapped to a single CCX (may be a problem if > than 4 due to numa)
 Assume that p/d vllm instances are treated as tensor parallel == 1
 see if there is a better way to detect a llm-engine container
+
+
+
+manual build and test
+in a seperate console
+sudo go run cmd/main.go
+
+ctrl C to terminate, no artifacts left
+
+all logging will be on the console

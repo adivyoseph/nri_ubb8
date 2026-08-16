@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/adivyoseph/nri_ubb8/pkg/allocate"
 	//plugin "github.com/adivyoseph/nri_ubb8/pkg/plugin"
@@ -38,6 +39,10 @@ func main() {
 	//go plugin.PluginStart()
 	//Todo impliment systemd or deamon loading
 	for {
+		timer := time.NewTimer(10 * time.Second)
+		<-timer.C
+		log.Printf("10 seconds\n")
+		allocate.DumpState()
 	}
 
 }

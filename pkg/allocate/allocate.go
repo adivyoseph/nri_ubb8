@@ -1,6 +1,7 @@
 package allocate
 
 import (
+	"fmt"
 	"log"
 	"slices"
 
@@ -236,4 +237,83 @@ func RemoveContainer(pod *api.PodSandbox, container *api.Container) {
 		}
 	}
 
+}
+
+func DumpState() {
+	const ccxPerPage = 4
+	const colWidth = 20
+
+	numNodes := len(_cpuPool.Nodes)
+	for n := 0; n < numNodes; n++ {
+		var ccxs []CcxStruct
+		ccxs = append(ccxs, _cpuPool.Nodes[n].CcXs...)
+		ccxs = append(ccxs, _gpuPool.Nodes[n].CcXs...)
+
+		log.Printf("======== NUMA node %d ========", n)
+
+		if len(ccxs) == 0 {
+			log.Printf("  (no CCXs)")
+			continue
+		}
+
+		for start := 0; start < len(ccxs); start += ccxPerPage {
+			end := start + ccxPerPage
+			if end > len(ccxs) {
+				end = len(ccxs)
+			}
+			page := ccxs[start:end]
+
+			titleRow := "Title        :"
+			typeRow := "Pool type    :"
+			usedRow := "Quanta used  :"
+			maxContainers := 0
+
+			for _, ccx := range page {
+				numCpus := ccx.Capacity / 1024
+				titleRow += fmt.Sprintf(" %-*s|", colWidth, fmt.Sprintf("CCX %d (%d cpus)", ccx.CcxId, numCpus))
+
+				poolType := "shared"
+				if ccx.GpuCard != "" {
+					poolType = fmt.Sprintf("card(%s)", ccx.GpuCard)
+				}
+				typeRow += fmt.Sprintf(" %-*s|", colWidth, poolType)
+
+				usedRow += fmt.Sprintf(" %-*s|", colWidth, fmt.Sprintf("%d/%d", ccx.Used, ccx.Capacity))
+
+				if len(ccx.Containers) > maxContainers {
+					maxContainers = len(ccx.Containers)
+				}
+			}
+
+			log.Printf("%s", titleRow)
+			log.Printf("%s", typeRow)
+			log.Printf("%s", usedRow)
+
+			if maxContainers == 0 {
+				emptyRow := "Containers   :"
+				for range page {
+					emptyRow += fmt.Sprintf(" %-*s|", colWidth, "(none)")
+				}
+				log.Printf("%s", emptyRow)
+				continue
+			}
+
+			for i := 0; i < maxContainers; i++ {
+				label := "Containers   :"
+				if i > 0 {
+					label = "             :"
+				}
+				row := label
+				for _, ccx := range page {
+					entry := ""
+					if i < len(ccx.Containers) {
+						c := ccx.Containers[i]
+						entry = fmt.Sprintf("%s (%d)", c.ConatinerName, c.CpuQuanta)
+					}
+					row += fmt.Sprintf(" %-*s|", colWidth, entry)
+				}
+				log.Printf("%s", row)
+			}
+		}
+	}
 }
