@@ -42,3 +42,6 @@ sudo go run cmd/main.go
 ctrl C to terminate, no artifacts left
 
 all logging will be on the console
+
+
+go build -o nri_ubb8 cmd/main.go
