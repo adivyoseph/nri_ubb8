@@ -110,7 +110,7 @@ func (p *plugin) Synchronize(ctx context.Context, pods []*api.PodSandbox, contai
 						path := d.GetPath()
 						_, cardNum, cardFound := strings.Cut(path, "card")
 						if cardFound {
-							log.Printf("SYNC Container %s %s %d\n", d.GetName(), path, cardNum)
+							log.Printf("SYNC Container %s %s\n", path, cardNum)
 
 						}
 						if val, ok := annotations["amd.smt"]; ok && val == "off" {
@@ -209,7 +209,7 @@ func (p *plugin) CreateContainer(ctx context.Context, pod *api.PodSandbox, conta
 		container.GetName())
 	log.Printf("   Container  CgroupsPath %s, cpusShares %d \n", container.Linux.GetCgroupsPath(), container.Linux.Resources.Cpu.Shares.GetValue())
 
-	adjustment := &api.ContainerAdjustment{}
+	var updates []*api.ContainerUpdate
 	cpuSet := ""
 	numa := "0"
 
@@ -224,7 +224,7 @@ func (p *plugin) CreateContainer(ctx context.Context, pod *api.PodSandbox, conta
 			path := d.GetPath()
 			_, cardNum, cardFound := strings.Cut(path, "card")
 			if cardFound {
-				log.Printf("SYNC Container %s %s %d\n", d.GetName(), path, cardNum)
+				log.Printf("SYNC Container %s %s\n", path, cardNum)
 			}
 			if val, ok := annotations["amd.smt"]; ok && val == "off" {
 				cpuSet, numa = allocate.ReserveCard(pod, container, path, 0)
@@ -235,16 +235,19 @@ func (p *plugin) CreateContainer(ctx context.Context, pod *api.PodSandbox, conta
 			update.SetContainerId(container.GetId())
 			update.SetLinuxCPUSetCPUs(cpuSet)
 			update.SetLinuxCPUSetMems(numa) // REQUIRED: Set memory nodes for cpuset, always numa 0
-			adjustment = append(adjustment, update)
+			updates = append(updates, update)
 		}
 
 	} else {
 
 		cpuSet, numa := allocate.AddContainerSharedPool(pod, container)
 		if len(numa) > 0 {
-			adjustment.SetLinuxCPUSetCPUs(cpuSet)
-			adjustment.SetLinuxCPUSetMems(numa) // REQUIRED: Set memory nodes for cpuset
-			log.Printf("   ContainerB adjustment.Linux=%v n", adjustment.Linux)
+			update := &api.ContainerUpdate{}
+			update.SetContainerId(container.GetId())
+			update.SetLinuxCPUSetCPUs(cpuSet)
+			update.SetLinuxCPUSetMems(numa) // REQUIRED: Set memory nodes for cpuset, always numa 0
+			updates = append(updates, update)
+			log.Printf("   ContainerB update.\n")
 		} else {
 			log.Printf("   ContainerB GetAllocation failed\n")
 		}
@@ -253,7 +256,7 @@ func (p *plugin) CreateContainer(ctx context.Context, pod *api.PodSandbox, conta
 	//allocate.DumpReserved()
 	// Return nil to indicate no adjustments needed
 	// You can modify container settings here by returning a ContainerAdjustment
-	return adjustment, nil, nil
+	return nil, updates, nil
 }
 
 // UpdateContainer handles container updates
