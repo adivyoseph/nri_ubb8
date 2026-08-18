@@ -57,18 +57,19 @@ func GetTopology() (Topology, error) {
 	if err_n != nil {
 		return retTopology, err_n
 	}
+	log.Printf("Nodes %d\n", len(nodes))
 
 	for _, nodeEntry := range nodes {
 		//log.Printf(" GetTopology system/node/%s\n", nodeEntry.Name())
 		_, nodeNum, nodeFound := strings.Cut(nodeEntry.Name(), "node")
 		if nodeFound {
-			log.Printf(" GetTopology node %s found\n", nodeNum)
+			log.Printf(" GetTopology new node %s found\n", nodeNum)
 			nodeId, _ := strconv.Atoi(nodeNum)
 			//build node entry
 			newNode := NumaNode{}
 			newNode.NodeId = nodeId
 			retTopology.NumaNodes = append(retTopology.NumaNodes, newNode)
-			// may not be in order, onle one entry per node
+			// may not be in order, only one entry per node
 			nodeIndex := nodeIndex(retTopology, nodeId)
 
 			// now find cpus
@@ -86,26 +87,27 @@ func GetTopology() (Topology, error) {
 						//can be in any order
 						log.Printf("GetTopology cpu %s found\n", cpuNum)
 
-						cacheFile := fmt.Sprintf("/sys/devices/system/node/node0/%v/cache/index3/id", cpuEntry.Name())
+						cacheFile := fmt.Sprintf("/sys/devices/system/node/node%d/%s/cache/index3/id", nodeId, cpuEntry.Name())
+						log.Printf("\t %s\n", cacheFile)
 						cacheIdRaw, _ := os.ReadFile(cacheFile)
 						cacheIdString := strings.Replace(string(cacheIdRaw), "\n", "", -1)
 						llcId, _ := strconv.Atoi(cacheIdString)
-						log.Printf("\t %s, chiplet %d\n", cpuEntry.Name(), llcId)
+						log.Printf("\t %s, chiplet id %d\n", cpuEntry.Name(), llcId)
 
 						chipletIndex, chipletFound := chipletExists(retTopology, nodeIndex, llcId)
 						if !chipletFound {
 							newChiplet := Chiplet{}
 							newChiplet.ChipletId = llcId
 
-							retTopology.NumaNodes[nodeId].Chiplets = append(retTopology.NumaNodes[nodeIndex].Chiplets, newChiplet)
+							retTopology.NumaNodes[nodeIndex].Chiplets = append(retTopology.NumaNodes[nodeIndex].Chiplets, newChiplet)
 							chipletIndex, _ = chipletExists(retTopology, nodeIndex, llcId)
 
 							//find cpus that belong to chiplet
-							cpusFile := fmt.Sprintf("/sys/devices/system/node/node0/%v/topology/die_cpus_list", cpuEntry.Name())
+							cpusFile := fmt.Sprintf("/sys/devices/system/node/node%d/%v/topology/die_cpus_list", nodeId, cpuEntry.Name())
 							cpusRaw, _ := os.ReadFile(cpusFile)
-							log.Printf("die_cpu_list %s (%d)\n", cpusRaw, chipletIndex)
-
 							cpusString := strings.Replace(string(cpusRaw), "\n", "", -1)
+							log.Printf("die_cpu_list %s ( chipletIndex %d)\n", cpusString, chipletIndex)
+
 							retTopology.NumaNodes[nodeIndex].Chiplets[chipletIndex].Cpus = cpusString
 
 							//log.Printf("die_cpu_list %s\n", cpusString)
@@ -138,7 +140,7 @@ func GetTopology() (Topology, error) {
 									newCore.Cpus[1] = corez + i
 								}
 
-								retTopology.NumaNodes[nodeIndex].Chiplets[llcId].Cores = append(retTopology.NumaNodes[nodeIndex].Chiplets[llcId].Cores, newCore)
+								retTopology.NumaNodes[nodeIndex].Chiplets[chipletIndex].Cores = append(retTopology.NumaNodes[nodeIndex].Chiplets[chipletIndex].Cores, newCore)
 							}
 						}
 

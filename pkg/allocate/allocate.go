@@ -112,10 +112,10 @@ func Init(topo topology.Topology) {
 	}
 
 	//debug
-	log.Printf("GPU pool\n")
-	for x := 0; x < len(topo.NumaNodes); x++ {
-		log.Printf("node %d (nodeid %d)\n", x, _gpuPool.Nodes[x].NodeId)
-		for c := 0; c < len(_cpuPool.Nodes[x].CcXs); c++ {
+	log.Printf("GPU pool nodes %d\n", len(_gpuPool.Nodes))
+	for x := 0; x < len(_gpuPool.Nodes); x++ {
+		log.Printf("node %d (nodeid %d) cards %d\n", x, _gpuPool.Nodes[x].NodeId, len(_gpuPool.Nodes[x].CcXs))
+		for c := 0; c < len(_gpuPool.Nodes[x].CcXs); c++ {
 			log.Printf("  ccx %d card %s cpus %s\n", _gpuPool.Nodes[x].CcXs[c].CcxId, _gpuPool.Nodes[x].CcXs[c].GpuCard, _gpuPool.Nodes[x].CcXs[c].CpuSet)
 
 		}
